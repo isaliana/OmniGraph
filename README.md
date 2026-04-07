@@ -1,8 +1,10 @@
-# 📖 Narrative Nexus
+# 📖 OmniGraph / 万象图
 
 **An interactive character relationship explorer for literary works.**
 
 > *Currently featuring: The Brothers Karamazov by Fyodor Dostoevsky*
+
+![OmniGraph Preview](assets/preview.png)
 
 ---
 
@@ -16,7 +18,6 @@
 - **Search bar** — instantly find and focus any character by name or nickname
 - **Bilingual UI** — full English / 中文 toggle, including all labels, character names, and the connection legend
 - **Connection Legend** — sidebar legend explaining all 8 relationship colour categories
-- **Customisable appearance** — change the focus highlight colour and background via the sidebar
 - **Battery-friendly** — the D3 simulation auto-pauses when the tab is hidden
 
 ---
@@ -42,8 +43,8 @@ This is a pure **HTML + JavaScript** project with no build step required.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/NarrativeNexus.git
-   cd NarrativeNexus
+   git clone https://github.com/isaliana/OmniGraph.git
+   cd OmniGraph
    ```
 
 2. Open `index.html` in your browser:
@@ -58,7 +59,7 @@ That's it — no server, no dependencies to install!
 ## 🗂 Project Structure
 
 ```
-NarrativeNexus/
+OmniGraph/
 ├── index.html          # Main application (all logic self-contained)
 └── assets/
     └── portraits/      # 15 circular character portrait PNGs
