@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OmniGraph · The Brothers Karamazov</title>
+  <meta name="description" content="An interactive character relationship explorer for The Brothers Karamazov by Dostoevsky. Click any character to focus their connections." />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: linear-gradient(rgba(10, 10, 16, 0.8), rgba(10, 10, 16, 0.95)), url('assets/background.jpg') center/cover no-repeat;
+      background-color: #0d0d14;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      font-family: 'Lato', sans-serif;
+      overflow: hidden;
+    }
+
+    #nn-root {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      transition: background .4s;
+    }
+
+    .nn-header {
+      padding: 15px 22px;
+      border-bottom: 1px solid rgba(200, 169, 110, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .search-container { position: relative; }
+
+    #search-input {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 6px 14px;
+      color: rgba(255, 255, 255, 0.8);
+      font-family: 'Lato', sans-serif;
+      font-size: 11.5px;
+      outline: none;
+      width: 180px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    #search-input:focus {
+      border-color: rgba(200, 169, 110, 0.4);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    #search-results {
+      display: none;
+      position: absolute;
+      top: 36px;
+      left: 0;
+      width: 100%;
+      background: rgba(12, 12, 20, 0.96);
+      border: 1px solid rgba(200, 169, 110, 0.25);
+      border-radius: 8px;
+      z-index: 2000;
+      max-height: 250px;
+      overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+    }
+
+    .search-item {
+      padding: 8px 12px;
+      font-size: 11px;
+      cursor: pointer;
+      color: rgba(255, 255, 255, 0.7);
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .search-item:hover {
+      background: rgba(200, 169, 110, 0.15);
+      color: #c8a96e;
+    }
+
+    .lang-toggle {
+      display: flex;
+      gap: 10px;
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .lang-btn {
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: inherit;
+      font-family: inherit;
+      font-size: inherit;
+      transition: color 0.2s;
+    }
+
+    .lang-btn.active { color: #c8a96e; font-weight: 600; }
+    .lang-btn:hover { color: rgba(200, 169, 110, 0.8); }
+
+    .nn-body { display: flex; flex: 1; min-height: 0; }
+
+    .nn-canvas { flex: 1; position: relative; overflow: hidden; }
+
+    #nn-svg { display: block; width: 100%; height: 100%; }
+
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: rgba(0, 0, 0, 0.28);
+      border-left: 1px solid rgba(255, 255, 255, 0.07);
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    .sb-title {
+      font-size: 9.5px;
+      letter-spacing: .12em;
+      color: rgba(255, 255, 255, 0.3);
+      font-family: 'Lato', sans-serif;
+      text-transform: uppercase;
+    }
+
+    .sb-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .sb-label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.55);
+      font-family: 'Lato', sans-serif;
+    }
+
+    .info-panel {
+      display: none;
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      background: rgba(10, 10, 18, 0.93);
+      border-radius: 10px;
+      padding: 16px 18px;
+      min-width: 240px;
+      max-width: 280px;
+      border: 1px solid rgba(200, 169, 110, 0.2);
+      backdrop-filter: blur(8px);
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+    }
+
+    .hover-tooltip {
+      display: none;
+      position: fixed;
+      pointer-events: none;
+      background: rgba(8, 8, 16, 0.95);
+      border-radius: 8px;
+      padding: 12px 14px;
+      min-width: 180px;
+      max-width: 240px;
+      border: 1px solid rgba(200, 169, 110, 0.25);
+      backdrop-filter: blur(12px);
+      z-index: 1000;
+      font-family: 'Lato', sans-serif;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      transition: opacity 0.15s ease;
+    }
+
+    #hint {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10.5px;
+      color: rgba(255, 255, 255, 0.18);
+      letter-spacing: .07em;
+      pointer-events: none;
+      white-space: nowrap;
+      font-family: 'Lato', sans-serif;
+    }
+
+    .back-hub-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.8);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: 'Lato', sans-serif;
+      font-size: 11px;
+      cursor: pointer;
+      text-decoration: none;
+      margin-right: 15px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .back-hub-btn:hover {
+      background: rgba(200, 169, 110, 0.2);
+      color: #c8a96e;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="nn-root">
+
+    <div class="nn-header">
+      <div style="display: flex; align-items: center;">
+        <a href="index.html" class="back-hub-btn">◀ HUB</a>
+        <div>
+          <div id="app-title" style="font-family:'Cinzel',serif;font-size:15px;color:#c8a96e;letter-spacing:.12em;">OMNIGRAPH</div>
+          <div id="app-subtitle" style="font-size:14px;color:rgba(255,255,255,0.6);letter-spacing:.06em;margin-top:3px;">
+            The Brothers Karamazov · Dostoevsky</div>
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="search-container">
+          <input type="text" id="search-input" placeholder="Search character..." />
+          <div id="search-results"></div>
+        </div>
+        <div class="lang-toggle">
+          <button class="lang-btn active" onclick="setLang('en')" id="btn-en">EN</button>
+          <span>|</span>
+          <button class="lang-btn" onclick="setLang('zh')" id="btn-zh">中文</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="nn-body">
+      <div class="nn-canvas">
+        <svg id="nn-svg"></svg>
+        <div class="info-panel" id="info-panel"></div>
+        <div id="hint">CLICK A CHARACTER TO FOCUS · DRAG TO EXPLORE · SCROLL TO ZOOM</div>
+      </div>
+      <div class="hover-tooltip" id="hover-tooltip"></div>
+      <div class="sidebar">
+        <div style="margin-top:12px;">
+          <div class="sb-title" id="sb-legend-title">Connection Legend</div>
+          <div id="legend-items" style="display:flex;flex-direction:column;gap:7px;margin-top:8px;">
+            <div class="sb-row">
+              <div style="width:24px;height:3px;background:#e5b567;border-radius:2px;flex-shrink:0;"></div>
+              <span class="sb-label" data-legend="family">Family</span>
+            </div>
+            <div class="sb-row">
+              <div style="width:24px;height:3px;background:#b09e86;border-radius:2px;flex-shrink:0;"></div>
+              <span class="sb-label" data-legend="illegitimate">Illegitimate</span>
+            </div>
+            <div class="sb-row">
+              <div style="width:24px;height:3px;background:#d96c75;border-radius:2px;flex-shrink:0;"></div>
+              <span class="sb-label" data-legend="love">Love</span>
+            </div>
+            <div class="sb-row">
+              <div style="width:24px;height:3px;background:#a875a6;border-radius:2px;flex-shrink:0;"></div>
+              <span class="sb-label" data-legend="romantic">Ex / Unrequited</span>
+            </div>
+            <div class="sb-row">
+              <div style="width:24px;height:3px;background:#d86c4f;border-radius:2px;flex-shrink:0;"></div>
+              <span class="sb-label" data-legend="conflict">Conflict / Rivalry</span>
+            </div>
+            <div class="sb-row">
+              <div style="width:24px;height:3px;background:#6b9e7d;border-radius:2px;flex-shrink:0;"></div>
+              <span class="sb-label" data-legend="mentor">Mentor</span>
+            </div>
+            <div class="sb-row">
+              <div style="width:24px;height:3px;background:#648cb4;border-radius:2px;flex-shrink:0;"></div>
+              <span class="sb-label" data-legend="friendship">Friendship / Intellectual</span>
+            </div>
+            <div class="sb-row">
+              <div style="width:24px;height:3px;background:#7a7a8c;border-radius:2px;flex-shrink:0;"></div>
+              <span class="sb-label" data-legend="neutral">Acquaintance / Servant</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:auto;font-size:10.5px;color:rgba(255,255,255,0.3);font-family:'Lato',sans-serif;line-height:1.6;" id="sb-help-text">
+          Line thickness reflects relationship weight. Click a portrait to orbit their network.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <script>
+    (function () {
+
+      let currentLang = 'en';
+
+      const STRINGS = {
+        en: {
+          title: "OmniGraph",
+          subtitle: "The Brothers Karamazov · Dostoevsky",
+          hint: "CLICK A CHARACTER TO FOCUS · DRAG TO EXPLORE · SCROLL TO ZOOM",
+          searchPlaceholder: "Search character...",
+          helpText: "Line thickness reflects relationship weight. Click a portrait to orbit their network.",
+          connections: "CONNECTIONS",
+          noDirectOrbits: "No direct connections",
+          legendTitle: "Connection Legend",
+          legend: { family: "Family", illegitimate: "Illegitimate", love: "Love", romantic: "Ex / Unrequited", conflict: "Conflict / Rivalry", mentor: "Mentor", friendship: "Friendship / Intellectual", neutral: "Acquaintance / Servant" },
+          relationshipTypes: {
+            "father-son": "father-son", "mother-daughter": "mother-daughter", "illegitimate": "illegitimate son",
+            "brothers": "brothers", "intellectual": "intellectual influence", "love": "romantic love",
+            "rivalry": "rivalry", "ex-fiancée": "ex-fiancée", "unrequited": "unrequited love",
+            "mentor": "spiritual mentor", "friendship": "friendship", "acquaintance": "acquaintance",
+            "scheme": "scheme / manipulation", "conflict": "conflict / humiliation", "servant": "servant / master"
+          }
+        },
+        zh: {
+          title: "万象图",
+          subtitle: "卡拉马佐夫兄弟 · 陀思妥耶夫斯基",
+          hint: "点击角色聚焦 · 拖曳探索 · 滚动缩放",
+          searchPlaceholder: "搜索角色...",
+          helpText: "连线粗细反映了关系的紧密程度。点击肖像探索他们的关系网。",
+          connections: "人际连接",
+          noDirectOrbits: "无直接关联",
+          legendTitle: "连线图例",
+          legend: { family: "家族", illegitimate: "私生", love: "恋情", romantic: "前任/暗恋", conflict: "冲突/竞争", mentor: "导师", friendship: "友谊/思想", neutral: "相识/主仆" },
+          relationshipTypes: {
+            "father-son": "父子", "mother-daughter": "母女", "illegitimate": "私生子",
+            "brothers": "兄弟", "intellectual": "思想影响", "love": "恋情",
+            "rivalry": "情敌/竞争", "ex-fiancée": "前未婚妻", "unrequited": "单恋",
+            "mentor": "精神导师", "friendship": "友谊", "acquaintance": "相识",
+            "scheme": "算计/利用", "conflict": "冲突/受辱", "servant": "主仆"
+          }
+        }
+      };
+
+      const PORTRAITS = {
+        fyodor: "assets/portraits/fyodor.png",
+        dmitri: "assets/portraits/dmitri.png",
+        ivan: "assets/portraits/ivan.png",
+        alyosha: "assets/portraits/alyosha.png",
+        smerdyakov: "assets/portraits/smerdyakov.png",
+        katerina: "assets/portraits/katerina.png",
+        grushenka: "assets/portraits/grushenka.png",
+        zosima: "assets/portraits/zosima.png",
+        ilyusha: "assets/portraits/ilyusha.png",
+        snegiryov: "assets/portraits/snegiryov.png",
+        grigory: "assets/portraits/grigory.png",
+        miusov: "assets/portraits/miusov.png",
+        khokhlakova: "assets/portraits/khokhlakova.png",
+        lise: "assets/portraits/lise.png",
+        rakitin: "assets/portraits/rakitin.png",
+      };
+
+      const NODES = [
+        {
+          id: "fyodor", mainColor: "#7D8E53", initials: "FK",
+          en: { name: "Fyodor Karamazov", nickname: "", quote: "I am a buffoon and play the buffoon, but I am a man of the highest feelings.", summary: "The dissolute patriarch of the Karamazov family and the novel's catalyst for tragedy. A vulgar, licentious, and supremely selfish man who uses buffoonery as a shield for his depravity. He sired three legitimate sons and one illegitimate, yet cared for none. His obsessive lust for Grushenka puts him in direct rivalry with his eldest son Dmitri, a collision that ultimately costs him his life on the night of the murder." },
+          zh: { name: "老卡拉马佐夫", nickname: "", quote: "我是个小丑，我扮演小丑，但我是个有崇高感情的人。", summary: "卡拉马佐夫家族的堕落族长，是整部小说悲剧的根源。一个粗俗、淫荡、极端自私的人，以扮演小丑来掩盖自己的堕落本性。他生了三个嫡子和一个私生子，却对任何人都漠不关心。他对格鲁申卡的痴迷使他与长子德米特里形成了直接的竞争关系，这场冲突最终在那个命案之夜夺走了他的生命。" }
+        },
+        {
+          id: "dmitri", mainColor: "#5D6F7B", initials: "DK",
+          en: { name: "Dmitri Karamazov", nickname: "Mitya", quote: "I may be wicked, but I did not steal my father's money.", summary: "The eldest Karamazov son — a volatile, sensual former military officer torn between his vices and his nobler instincts. Drowning in debt and consumed by a rival passion with his own father for Grushenka, Mitya's explosive nature leads him to the night of the murder. Though convicted by the court, his soul contains a genuine capacity for suffering and redemption that the verdict cannot extinguish." },
+          zh: { name: "德米特里", nickname: "米嘉", quote: "我可能是坏人，但我没有偷父亲的钱。", summary: "长子，一个情绪化、充满感官欲望的前军官，在自己的恶习和高尚本能之间苦苦挣扎。他深陷债务，又与亲生父亲在格鲁申卡身上形成了激烈的情感竞争。他暴烈的性格将他引向了案发之夜。尽管被法庭定罪，但他的灵魂深处拥有一种真实的受苦与救赎的能力，这是任何判决都无法熄灭的。" }
+        },
+        {
+          id: "ivan", mainColor: "#887258", initials: "IK",
+          en: { name: "Ivan Karamazov", nickname: "Vanya", quote: "It's not God I don't accept, it's the world he created.", summary: "The brilliant, coldly rational middle Karamazov brother whose soaring intellect becomes a form of spiritual torment. His philosophical rejection of God's world — on the grounds that it permits children's suffering — inadvertently grants Smerdyakov the moral licence to commit murder. Ivan's psychological disintegration, culminating in a hallucinatory dialogue with the Devil himself, is the novel's most shattering intellectual drama." },
+          zh: { name: "伊万", nickname: "瓦尼亚", quote: "我不接受的不是上帝，而是他所创造的世界。", summary: "才华横溢、冷静理性的次子，他那翱翔的智识最终成为一种精神折磨。他在哲学上对上帝世界的拒绝——以允许孩子受苦为由——无意中为斯麦尔佳科夫的弑父行为提供了道德借口。伊万的心理崩溃，最终以与魔鬼本身的幻觉式对话告终，是整部小说最震撼人心的思想戏剧。" }
+        },
+        {
+          id: "alyosha", mainColor: "#5B5653", initials: "AK",
+          en: { name: "Alexei Karamazov", nickname: "Alyosha", quote: "Love in action is a harsh and dreadful thing compared to love in dreams.", summary: "The youngest and purest Karamazov — a novice monk and devoted disciple of the Elder Zosima. Unlike his brothers, Alyosha possesses an innate capacity for unconditional love and moral clarity. He serves as the novel's moral compass, mediating between warring factions of his family, guiding Ilyusha's schoolmates toward compassion, and embodying Dostoevsky's answer to Ivan's philosophical despair." },
+          zh: { name: "阿列克谢", nickname: "阿廖沙", quote: "与梦中的爱相比，行动中的爱是一件严酷而可怕的事情。", summary: "最年幼也最纯洁的卡拉马佐夫，是修道院的见习修士，也是佐西马长老的忠诚弟子。与兄弟们不同，阿廖沙天生具备无条件的爱与道德清明。他是小说的道德指南针，在家族各方势力间斡旋调停，引领伊柳沙的同学们走向悲悯，也体现了陀思妥耶夫斯基对伊万哲学绝望的回答。" }
+        },
+        {
+          id: "smerdyakov", mainColor: "#7F8487", initials: "SM",
+          en: { name: "Pavel Smerdyakov", nickname: "", quote: "I hate all of Russia.", summary: "The illegitimate and deeply resentful fourth son of Fyodor Karamazov, born of a mute vagrant woman. Working as the household cook, he cultivates a sycophantic relationship with Ivan, whose nihilism he uses to justify murdering their father. A scheming, epileptic loner consumed by self-loathing and contempt for Russia, he ultimately confesses the truth to Ivan before hanging himself in silence." },
+          zh: { name: "斯麦尔佳科夫", nickname: "", quote: "我恨整个俄罗斯。", summary: "老卡拉马佐夫私生的第四子，其母是一名哑巴流浪女。他在家中做厨子，暗中与伊万培养出一种谄媚的关系，并借用伊万的虚无主义为弑父行为寻找道德依据。这个阴沉、患有癫痫的孤独者，充斥着对自身与俄罗斯的鄙视，最终在向伊万吐露真相后，悄然上吊自尽。" }
+        },
+        {
+          id: "katerina", mainColor: "#9C85AF", initials: "KI",
+          en: { name: "Katerina Ivanovna", nickname: "Katya", quote: "I shall always love him, but I do not want his love.", summary: "Dmitri's proud, high-minded ex-fiancée who is paralyzed by a complex web of pride, debt, and conflicted love. She insists on her devotion to Dmitri even as she grows genuinely close to Ivan. At the trial, in a stunning act of wounded pride, she produces a damning letter from Dmitri that seals his conviction — an act she immediately regrets with devastating anguish." },
+          zh: { name: "卡捷琳娜", nickname: "卡佳", quote: "我将永远爱他，但我不需要他的爱。", summary: "德米特里傲慢而高尚的前未婚妻，被一张由骄傲、债务与矛盾情感交织而成的复杂网络所束缚。她坚持表达对德米特里的忠诚，却在不知不觉间与伊万建立了真实的情感。在审判中，出于受伤的骄傲，她出示了一封德米特里写下的关键信件，从而彻底葬送了他——而这一举动随即让她陷入了毁灭性的悔恨之中。" }
+        },
+        {
+          id: "grushenka", mainColor: "#8B2C33", initials: "GR",
+          en: { name: "Agrafena Svetlova", nickname: "Grushenka", quote: "I am wicked, I know it. But ask of me no virtue.", summary: "A beautiful, fiercely proud woman with a notorious reputation, courted obsessively by both Fyodor and Dmitri. Beneath her seductive exterior lies a woman of genuine depth, once betrayed and abandoned by a Polish officer. Her arrival at the monastery the night of the murder and her eventual, transformative love for Dmitri redeem her from the role of femme fatale into one of the novel's most powerful figures of grace." },
+          zh: { name: "格鲁申卡", nickname: "", quote: "我是个坏女人，我知道。但别向我索取美德。", summary: "一个美丽、自尊心极强、名声不佳的女人，被费多尔和德米特里痴迷地追求。在她诱人的外表之下，是一个曾被一个波兰军官背叛和抛弃的、真正有深度的女人。她在案发之夜抵达修道院，以及她对德米特里最终的、具有蜕变性质的爱，将她从蛇蝎美人的角色中解脱出来，成为小说中最有力量的恩典形象之一。" }
+        },
+        {
+          id: "zosima", mainColor: "#4A4A4A", initials: "EZ",
+          en: { name: "Father Zosima", nickname: "", quote: "Love all God's creation, both the whole and every grain of sand.", summary: "The saintly, beloved Elder of the local monastery and Alyosha's spiritual father. His teachings of active, unconditional love — love for the whole of creation, for every creature — form the novel's moral and spiritual foundation. His controversial death, when his body decays rather than remaining miraculously preserved, shocks the community but ultimately deepens rather than destroys Alyosha's faith." },
+          zh: { name: "佐西马长老", nickname: "", quote: "热爱上帝的一切造物，无论整体还是每一粒沙尘。", summary: "修道院里受人爱戴的圣者长老，也是阿廖沙的精神父亲。他关于积极的、无条件之爱的教导——爱所有造物，爱每一个生命——构成了整部小说道德与精神的基础。他去世后，尸体腐败而未能奇迹般地保持完好，这一事件震撼了整个修道院社区，却最终深化而非摧毁了阿廖沙的信仰。" }
+        },
+        {
+          id: "lise", mainColor: "#7bb8c8", initials: "LK",
+          en: { name: "Lise Khokhlakova", nickname: "Lise", quote: "I want to do evil. I want to set fire to the house.", summary: "The mischievous, capricious adolescent daughter of Madame Khokhlakova, who develops a complex emotional bond with Alyosha. Her letters and confessions oscillate between tender devotion and deliberate cruelty, revealing a deeply conflicted inner world. She represents the novel's fascination with psychological extremes even in its youngest characters — a soul simultaneously drawn to holiness and self-destruction." },
+          zh: { name: "丽莎", nickname: "", quote: "我想做坏事。我想放火烧房子。", summary: "霍赫拉科娃夫人任性的青春期女儿，与阿廖沙建立起了一种复杂的情感纽带。她的书信和告白在温柔的爱慕与刻意的残酷之间摇摆，揭示了一个深度矛盾的内心世界。她代表了小说对即便是最年轻的人物心理极端状态的迷恋——一个同时被圣洁与自我毁灭所吸引的灵魂。" }
+        },
+        {
+          id: "rakitin", mainColor: "#a0a0b8", initials: "MR",
+          en: { name: "Mikhail Rakitin", nickname: "Rakitin", quote: "Humanitarian feelings are all very well, but real money is better.", summary: "A seminary student of low birth and high ambition who conceals his scheming nature beneath a veneer of progressive, socialist ideas. He harbors deep, gnawing resentment toward the Karamazovs and manipulates situations for personal gain — most notably orchestrating Alyosha's disorienting meeting with Grushenka following Zosima's death. At the trial, he testifies against Dmitri with cynical relish." },
+          zh: { name: "拉基京", nickname: "", quote: "人道主义情操固然好，但真金白银更实在。", summary: "出身低微、野心勃勃的神学院学生，将自己的阴谋本性掩藏在进步的社会主义思想外衣之下。他对卡拉马佐夫一家怀有深刻的、啃噬内心的嫉恨，并为个人利益操纵局势——最典型的是在佐西马去世后安排阿廖沙与格鲁申卡进行那次令人心绪大乱的会面。在审判中，他带着愤世嫉俗的快感指证了德米特里。" }
+        },
+        {
+          id: "ilyusha", mainColor: "#b8c5d1", initials: "IS",
+          en: { name: "Ilyusha Snegiryov", nickname: "Ilyushechka", quote: "Papa, don't cry. When I die, get a good boy.", summary: "A frail, fiercely proud young boy whose public humiliation — caused by Dmitri dragging his father through the street by the beard — shatters him with shame. His slow death from illness, surrounded by the schoolmates whom Alyosha has gathered into a circle of brotherhood, provides one of the most moving sequences in all of Russian literature." },
+          zh: { name: "伊柳沙", nickname: "伊柳舍奇卡", quote: "爸爸，别哭。我死了，你再找个好孩子。", summary: "一个体弱而骄傲的小男孩，因德米特里在街上拽着父亲的胡子当众羞辱，他被羞耻感彻底击垮。他在病中缓慢离世，周围环绕着阿廖沙召集起来的一群同学兄弟，这一情节是整个俄国文学中最动人心弦的篇章之一。" }
+        },
+        {
+          id: "snegiryov", mainColor: "#7a6b5d", initials: "YS",
+          en: { name: "Ilya Snegiryov", nickname: "", quote: "I am not going to sell my honor for money.", summary: "An impoverished, deeply humiliated former army captain whose public degradation at the hands of Dmitri — dragged by the beard in front of his own son — becomes a wound that poisons his family. His fierce pride prevents him from accepting Katerina's charity even in their direst need, and his anguished devotion to the dying Ilyusha brings him to the edge of madness." },
+          zh: { name: "斯涅吉廖夫", nickname: "", quote: "我不会用荣誉换钱。", summary: "贫困潦倒、饱受羞辱的前陆军上尉，他被德米特里在自己儿子面前当众揪着胡子拖拽的经历，成为了一道毒化整个家庭的伤口。他强烈的自尊使他在最困窘时也拒绝接受卡捷琳娜的施舍，而他对垂死伊柳沙的悲痛守护，将他推向了近乎疯狂的边缘。" }
+        },
+        {
+          id: "grigory", mainColor: "#5c5c5c", initials: "GV",
+          en: { name: "Grigory Vasilievich", nickname: "Grigory", quote: "You are a monster. I brought you into the world. You are a monster.", summary: "The old, stubbornly devout servant who raised all three Karamazov brothers and whom Fyodor trusts absolutely. He bears witness to critical events on the night of the murder — seeing what he believes to be Dmitri fleeing — and his testimony at the trial, given entirely in good faith, becomes a key pillar of the case that convicts an innocent man." },
+          zh: { name: "格里戈里", nickname: "", quote: "你是个怪物。是我把你带到这个世界上的。你是个怪物。", summary: "抚养了三个卡拉马佐夫兄弟的老仆人，固执而虔诚，是费多尔绝对信任的人。他目睹了案发之夜的关键事件——他相信自己看到德米特里仓皇而逃——他在审判中完全出于好意的证词，成为定罪一个无辜之人的重要支柱。" }
+        },
+        {
+          id: "miusov", mainColor: "#8ca3a6", initials: "PM",
+          en: { name: "Pyotr Miusov", nickname: "", quote: "I protest in the name of principle and common sense.", summary: "A wealthy, Westernized liberal landowner and distant relative of the Karamazovs who fancies himself far above the chaos of this provincial family. His petty legal quarrel with Fyodor over monastery lands inadvertently sets the novel's events in motion by bringing the entire family to the monastery. He is a man who prides himself on civilized ideals yet proves just as petty and vain as those he disdains." },
+          zh: { name: "米乌索夫", nickname: "", quote: "我以原则和常识的名义提出抗议。", summary: "富有的西化自由派地主，是卡拉马佐夫家族的远亲，自认为远高于这个外省家族的混乱之上。他与费多尔关于修道院土地的琐碎法律纠纷，无意中将整个家庭引入修道院，从而启动了小说的核心事件。他以崇尚文明理想自居，却在实际中证明了自己和那些他所蔑视的人一样，不过是个小肚鸡肠、虚荣浅薄之人。" }
+        },
+        {
+          id: "khokhlakova", mainColor: "#d4b4cc", initials: "MK",
+          en: { name: "Madame Khokhlakova", nickname: "", quote: "I believe everything, everything! But I must have proof.", summary: "A wealthy, well-meaning but amusingly scatterbrained widow who flits between religious enthusiasm and worldly anxieties. She seeks spiritual counsel from Father Zosima and involves herself in others' affairs with more energy than wisdom. Her daughter Lise's tender bond with Alyosha is a source of both gentle comedy and genuine emotional weight in the novel." },
+          zh: { name: "霍赫拉科娃夫人", nickname: "", quote: "我相信一切，一切！但我必须要有证明。", summary: "富有、善意但滑稽地头脑发热的寡妇，在宗教热情与世俗焦虑之间摇摆不定。她向佐西马长老寻求精神慰藉，并以超越智慧的热情介入他人的事务。她女儿丽莎与阿廖沙之间温柔的羁绊，在小说中既是轻喜剧的来源，也承载着真实的情感分量。" }
+        }
+      ];
+
+      const LINKS = [
+        { source: "fyodor", target: "dmitri", weight: 7, type: "father-son" },
+        { source: "fyodor", target: "ivan", weight: 5, type: "father-son" },
+        { source: "fyodor", target: "alyosha", weight: 6, type: "father-son" },
+        { source: "fyodor", target: "smerdyakov", weight: 4, type: "illegitimate" },
+        { source: "dmitri", target: "ivan", weight: 6, type: "brothers" },
+        { source: "dmitri", target: "alyosha", weight: 8, type: "brothers" },
+        { source: "ivan", target: "alyosha", weight: 9, type: "brothers" },
+        { source: "ivan", target: "smerdyakov", weight: 7, type: "intellectual" },
+        { source: "dmitri", target: "grushenka", weight: 9, type: "love" },
+        { source: "fyodor", target: "grushenka", weight: 5, type: "unrequited" },
+        { source: "dmitri", target: "katerina", weight: 6, type: "ex-fiancée" },
+        { source: "ivan", target: "katerina", weight: 7, type: "love" },
+        { source: "alyosha", target: "zosima", weight: 9, type: "mentor" },
+        { source: "alyosha", target: "lise", weight: 6, type: "friendship" },
+        { source: "alyosha", target: "rakitin", weight: 4, type: "acquaintance" },
+        { source: "rakitin", target: "grushenka", weight: 5, type: "scheme" },
+        { source: "katerina", target: "grushenka", weight: 6, type: "rivalry" },
+        { source: "snegiryov", target: "ilyusha", weight: 8, type: "father-son" },
+        { source: "alyosha", target: "ilyusha", weight: 7, type: "friendship" },
+        { source: "dmitri", target: "snegiryov", weight: 8, type: "conflict" },
+        { source: "grigory", target: "fyodor", weight: 7, type: "servant" },
+        { source: "grigory", target: "smerdyakov", weight: 6, type: "father-son" },
+        { source: "miusov", target: "fyodor", weight: 5, type: "conflict" },
+        { source: "khokhlakova", target: "lise", weight: 8, type: "mother-daughter" },
+        { source: "khokhlakova", target: "alyosha", weight: 4, type: "acquaintance" },
+        { source: "miusov", target: "alyosha", weight: 4, type: "acquaintance" }
+      ];
+
+      const SENTIMENT_COLORS = {
+        "father-son": "#e5b567", "mother-daughter": "#e5b567", "brothers": "#e5b567",
+        "illegitimate": "#b09e86", "love": "#d96c75", "ex-fiancée": "#a875a6",
+        "unrequited": "#a875a6", "rivalry": "#d86c4f", "conflict": "#d86c4f",
+        "scheme": "#d86c4f", "mentor": "#6b9e7d", "intellectual": "#648cb4",
+        "friendship": "#648cb4", "acquaintance": "#7a7a8c", "servant": "#7a7a8c",
+      };
+
+      const TYPE_ANGLES = {
+        "father-son": -90, "mother-daughter": -90, "illegitimate": -60, "brothers": -30,
+        "intellectual": 0, "love": 45, "rivalry": 90, "conflict": 110,
+        "ex-fiancée": 135, "unrequited": 160, "mentor": 180, "friendship": 210,
+        "acquaintance": 230, "servant": 250, "scheme": 270,
+      };
+
+      let selected = null;
+      let linkSel;
+
+      const searchInput = document.getElementById("search-input");
+      const searchRes = document.getElementById("search-results");
+
+      searchInput.addEventListener("input", function () {
+        const v = this.value.toLowerCase().trim();
+        if (!v) { searchRes.style.display = 'none'; return; }
+        const matches = NODES.filter(n =>
+          n.en.name.toLowerCase().includes(v) ||
+          n.zh.name.toLowerCase().includes(v) ||
+          n.en.nickname.toLowerCase().includes(v)
+        );
+        if (matches.length > 0) {
+          searchRes.innerHTML = matches.map(n =>
+            `<div class="search-item" onclick="selectFromSearch('${n.id}')">
+               <span style="color:${n.mainColor};font-weight:bold;">${n[currentLang].name}</span>
+               ${n[currentLang].nickname ? `<span style="opacity:0.5;margin-left:6px;">"${n[currentLang].nickname}"</span>` : ''}
+             </div>`
+          ).join("");
+          searchRes.style.display = 'block';
+        } else {
+          searchRes.style.display = 'none';
+        }
+      });
+
+      window.selectFromSearch = function (id) {
+        searchRes.style.display = 'none';
+        searchInput.value = '';
+        selected = id;
+        applyFocus(id);
+        showPanel(id);
+      };
+
+      document.addEventListener("click", e => {
+        if (e.target !== searchInput) searchRes.style.display = 'none';
+      });
+
+      window.setLang = (lang) => {
+        currentLang = lang;
+        document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+        document.getElementById('btn-zh').classList.toggle('active', lang === 'zh');
+        const s = STRINGS[lang];
+        document.getElementById('app-title').textContent = s.title;
+        document.getElementById('app-subtitle').textContent = s.subtitle;
+        document.getElementById('hint').textContent = s.hint;
+        document.getElementById('sb-help-text').textContent = s.helpText;
+        searchInput.placeholder = s.searchPlaceholder;
+        document.getElementById('sb-legend-title').textContent = s.legendTitle;
+        document.querySelectorAll('[data-legend]').forEach(el => {
+          const key = el.getAttribute('data-legend');
+          if (s.legend[key]) el.textContent = s.legend[key];
+        });
+        node.selectAll('.nn-label').text(d => d[currentLang].name);
+        if (selected) showPanel(selected);
+      };
+
+      const svgEl = document.getElementById("nn-svg");
+      let W = svgEl.clientWidth || window.innerWidth;
+      let H = svgEl.clientHeight || (window.innerHeight - 60);
+      const svg = d3.select("#nn-svg").attr("viewBox", `0 0 ${W} ${H}`);
+      const defs = svg.append("defs");
+
+      const pat = defs.append("pattern").attr("id", "gg2").attr("width", 36).attr("height", 36).attr("patternUnits", "userSpaceOnUse");
+      pat.append("path").attr("d", "M 36 0 L 0 0 0 36").attr("fill", "none").attr("stroke", "rgba(255,255,255,0.032)").attr("stroke-width", "0.5");
+      const gridRect = svg.append("rect").attr("width", W).attr("height", H).attr("fill", "url(#gg2)");
+
+      window.addEventListener('resize', () => {
+        W = svgEl.clientWidth || window.innerWidth;
+        H = svgEl.clientHeight || (window.innerHeight - 60);
+        svg.attr("viewBox", `0 0 ${W} ${H}`);
+        gridRect.attr("width", W).attr("height", H);
+        if (!selected) {
+          sim.force("center", d3.forceCenter(W / 2, H / 2));
+          sim.alpha(0.3).restart();
+        }
+      });
+
+      const gf = defs.append("filter").attr("id", "gl3").attr("x", "-20%").attr("y", "-20%").attr("width", "140%").attr("height", "140%");
+      gf.append("feGaussianBlur").attr("stdDeviation", "2.5").attr("result", "blur1");
+      gf.append("feGaussianBlur").attr("stdDeviation", "5").attr("result", "blur2");
+      const fm = gf.append("feMerge");
+      fm.append("feMergeNode").attr("in", "blur2");
+      fm.append("feMergeNode").attr("in", "blur1");
+      fm.append("feMergeNode").attr("in", "SourceGraphic");
+
+      const portraitPatterns = {};
+      NODES.forEach(nd => {
+        if (!PORTRAITS[nd.id]) return;
+        const p = defs.append("pattern")
+          .attr("id", "img-" + nd.id)
+          .attr("patternUnits", "objectBoundingBox")
+          .attr("width", "1").attr("height", "1");
+        p.append("image")
+          .attr("href", PORTRAITS[nd.id])
+          .attr("x", "0").attr("y", "0")
+          .attr("width", "56").attr("height", "56")
+          .attr("preserveAspectRatio", "xMidYMid slice");
+        portraitPatterns[nd.id] = true;
+      });
+
+      const nodes = NODES.map(d => ({ ...d }));
+      const links = LINKS.map(d => ({ ...d }));
+
+      function getConnected(id) {
+        const s = new Set([id]);
+        links.forEach(l => {
+          const src = typeof l.source === "object" ? l.source.id : l.source;
+          const tgt = typeof l.target === "object" ? l.target.id : l.target;
+          if (src === id) s.add(tgt);
+          if (tgt === id) s.add(src);
+        });
+        return s;
+      }
+
+      function getRelationship(id1, id2) {
+        for (const l of links) {
+          const src = typeof l.source === "object" ? l.source.id : l.source;
+          const tgt = typeof l.target === "object" ? l.target.id : l.target;
+          if ((src === id1 && tgt === id2) || (src === id2 && tgt === id1)) return l;
+        }
+        return null;
+      }
+
+      const sim = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(d => 170 - d.weight * 6))
+        .force("charge", d3.forceManyBody().strength(-340))
+        .force("center", d3.forceCenter(W / 2, H / 2))
+        .force("collision", d3.forceCollide(50))
+        .force("bound", () => {
+          const m = 55;
+          sim.nodes().forEach(n => {
+            if (n.fx != null) return;
+            if (n.x < m)     n.vx += (m - n.x) * 0.15;
+            if (n.x > W - m) n.vx -= (n.x - (W - m)) * 0.15;
+            if (n.y < m)     n.vy += (m - n.y) * 0.15;
+            if (n.y > H - m) n.vy -= (n.y - (H - m)) * 0.15;
+          });
+        })
+        .force("oscillate", () => {
+          const t = Date.now() / 1800;
+          sim.nodes().forEach((n, i) => {
+            if (n.fx != null) return;
+            n.vy += Math.sin(t + i * 1.3) * 0.12;
+            n.vx += Math.cos(t * 0.7 + i * 0.9) * 0.08;
+          });
+        })
+        .alphaTarget(0.015);
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) sim.stop();
+        else sim.alpha(0.05).restart();
+      });
+
+      const g = svg.append("g");
+      const zoomBehavior = d3.zoom().scaleExtent([0.3, 3]).on("zoom", e => g.attr("transform", e.transform));
+      svg.call(zoomBehavior);
+
+      linkSel = g.append("g").selectAll("path")
+        .data(links).join("path")
+        .attr("fill", "none")
+        .attr("stroke", d => SENTIMENT_COLORS[d.type] || "rgba(200,169,110,0.4)")
+        .attr("stroke-linecap", "round")
+        .attr("stroke-width", d => Math.max(1.5, d.weight * 0.8))
+        .attr("opacity", 0.6);
+
+      const node = g.append("g").selectAll("g")
+        .data(nodes).join("g")
+        .attr("cursor", "pointer")
+        .call(d3.drag()
+          .on("start", (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+          .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
+          .on("end", (e, d) => { if (!e.active) sim.alphaTarget(0.015); d.fx = null; d.fy = null; })
+        )
+        .on("click", (e, d) => {
+          e.stopPropagation();
+          selected = selected === d.id ? null : d.id;
+          applyFocus(selected);
+          showPanel(selected);
+        })
+        .on("mouseenter", (e, d) => showHoverTooltip(e, d))
+        .on("mousemove", (e, d) => moveHoverTooltip(e))
+        .on("mouseleave", () => hideHoverTooltip());
+
+      node.append("circle").attr("r", 28)
+        .attr("class", "nn-main-circle")
+        .attr("data-id", d => d.id)
+        .attr("fill", d => portraitPatterns[d.id] ? `url(#img-${d.id})` : "#1c1c24")
+        .attr("stroke", d => d.mainColor)
+        .attr("stroke-width", 2.5)
+        .style("filter", "url(#gl3)");
+
+      node.filter(d => !portraitPatterns[d.id])
+        .append("text")
+        .text(d => d.initials)
+        .attr("text-anchor", "middle").attr("dy", "0.36em")
+        .attr("font-size", "12px").attr("font-weight", "600")
+        .attr("font-family", "'Cinzel',serif")
+        .attr("fill", d => d.mainColor)
+        .attr("pointer-events", "none");
+
+      node.append("text")
+        .attr("class", "nn-label")
+        .text(d => d[currentLang].name)
+        .attr("text-anchor", "middle").attr("dy", "48px")
+        .attr("font-size", "11px").attr("font-family", "'Lato',sans-serif")
+        .attr("fill", "rgba(255,255,255,0.7)").attr("pointer-events", "none");
+
+      svg.on("click", () => { selected = null; applyFocus(null); showPanel(null); });
+
+      const hoverTooltip = document.getElementById('hover-tooltip');
+
+      function showHoverTooltip(event, d) {
+        const nd = NODES.find(n => n.id === d.id);
+        if (!nd) return;
+        const s = STRINGS[currentLang];
+        const charDetails = nd[currentLang];
+        const c = nd.mainColor;
+        let relationshipHtml = '';
+        if (selected && selected !== d.id) {
+          const rel = getRelationship(selected, d.id);
+          if (rel) {
+            const selNd = NODES.find(n => n.id === selected);
+            const relType = s.relationshipTypes[rel.type] || rel.type;
+            relationshipHtml = `
+              <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">
+                <div style="font-size:9px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">
+                  ${currentLang === 'en' ? 'Relationship with' : '与'} ${selNd[currentLang].name}
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <div style="width:${Math.max(12, rel.weight * 5)}px;height:3px;background:${SENTIMENT_COLORS[rel.type] || c};border-radius:2px;"></div>
+                  <span style="font-size:10.5px;color:rgba(255,255,255,0.7);">${relType}</span>
+                </div>
+              </div>`;
+          } else {
+            relationshipHtml = `
+              <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">
+                <div style="font-size:9.5px;color:rgba(255,255,255,0.25);font-style:italic;">
+                  ${currentLang === 'en' ? 'No direct connection' : '无直接关联'}
+                </div>
+              </div>`;
+          }
+        }
+        hoverTooltip.innerHTML = `
+          <div style="font-family:'Cinzel',serif;font-size:12px;color:${c};font-weight:600;margin-bottom:2px;">${charDetails.name}</div>
+          ${charDetails.nickname ? `<div style="font-size:9.5px;color:rgba(255,255,255,0.35);margin-bottom:4px;">"${charDetails.nickname}"</div>` : ''}
+          <div style="font-size:10px;color:rgba(255,255,255,0.55);line-height:1.4;">${charDetails.summary}</div>
+          ${relationshipHtml}`;
+        hoverTooltip.style.display = 'block';
+        hoverTooltip.style.opacity = '1';
+        moveHoverTooltip(event);
+      }
+
+      function moveHoverTooltip(event) {
+        const ttW = hoverTooltip.offsetWidth;
+        const ttH = hoverTooltip.offsetHeight;
+        let x = event.clientX + 16;
+        let y = event.clientY - 10;
+        if (x + ttW > window.innerWidth - 10) x = event.clientX - ttW - 16;
+        if (y + ttH > window.innerHeight - 10) y = window.innerHeight - ttH - 10;
+        if (y < 10) y = 10;
+        hoverTooltip.style.left = x + 'px';
+        hoverTooltip.style.top = y + 'px';
+      }
+
+      function hideHoverTooltip() {
+        hoverTooltip.style.display = 'none';
+        hoverTooltip.style.opacity = '0';
+      }
+
+      window.applyFocus = function (id) {
+        document.getElementById("hint").style.display = id ? "none" : "block";
+        const hl = "#c8a96e";
+
+        if (!id) {
+          svg.transition().duration(750).call(zoomBehavior.transform, d3.zoomIdentity);
+          node.transition().duration(280).attr("opacity", 1);
+          node.selectAll(".nn-main-circle").transition().duration(280)
+            .attr("stroke", d => d.mainColor).attr("stroke-width", 2.5);
+          linkSel.transition().duration(280)
+            .attr("opacity", 0.6)
+            .attr("stroke", d => SENTIMENT_COLORS[d.type] || "rgba(200,169,110,0.4)");
+          sim.force("x", null).force("y", null).force("clusterX", null).force("clusterY", null);
+          sim.force("charge", d3.forceManyBody().strength(-340));
+          sim.force("center", d3.forceCenter(W / 2, H / 2));
+          sim.alpha(0.4).alphaTarget(0.015).restart();
+          return;
+        }
+
+        const conn = getConnected(id);
+        svg.transition().duration(750)
+          .call(zoomBehavior.transform, d3.zoomIdentity.translate(W / 2, H / 2).scale(1.25).translate(-W / 2, -H / 2));
+        node.transition().duration(280).attr("opacity", d => conn.has(d.id) ? 1 : 0.45);
+        node.selectAll(".nn-main-circle").transition().duration(280)
+          .attr("stroke", d => d.id === id ? hl : d.mainColor)
+          .attr("stroke-width", d => d.id === id ? 3.5 : 2.5);
+        linkSel.transition().duration(280)
+          .attr("opacity", d => {
+            const s = typeof d.source === "object" ? d.source.id : d.source;
+            const t = typeof d.target === "object" ? d.target.id : d.target;
+            return (s === id || t === id) ? 0.9 : 0.18;
+          })
+          .attr("stroke", d => SENTIMENT_COLORS[d.type] || "rgba(200,169,110,0.4)");
+
+        const connLinks = links.filter(l => {
+          const src = typeof l.source === "object" ? l.source.id : l.source;
+          const tgt = typeof l.target === "object" ? l.target.id : l.target;
+          return src === id || tgt === id;
+        });
+
+        const nodeAngles = {};
+        const typeCounts = {};
+        connLinks.forEach(l => {
+          const src = typeof l.source === "object" ? l.source.id : l.source;
+          const tgt = typeof l.target === "object" ? l.target.id : l.target;
+          const otherId = src === id ? tgt : src;
+          const baseAngle = TYPE_ANGLES[l.type] !== undefined ? TYPE_ANGLES[l.type] : 0;
+          if (!typeCounts[l.type]) typeCounts[l.type] = 0;
+          const offset = typeCounts[l.type] * 28;
+          typeCounts[l.type]++;
+          nodeAngles[otherId] = (baseAngle + offset) * (Math.PI / 180);
+        });
+
+        const orbitRadius = 155;
+        sim.force("center", null);
+        sim.force("charge", d3.forceManyBody().strength(d => d.id === id ? 0 : conn.has(d.id) ? -80 : -50));
+        sim.force("clusterX", d3.forceX(d => {
+          if (d.id === id) return W / 2;
+          if (nodeAngles[d.id] !== undefined) return W / 2 + Math.cos(nodeAngles[d.id]) * orbitRadius;
+          return W / 2 + (d.x > W / 2 ? 380 : -380);
+        }).strength(d => d.id === id ? 1 : conn.has(d.id) ? 0.4 : 0.15));
+        sim.force("clusterY", d3.forceY(d => {
+          if (d.id === id) return H / 2;
+          if (nodeAngles[d.id] !== undefined) return H / 2 + Math.sin(nodeAngles[d.id]) * orbitRadius;
+          return H / 2 + (d.y > H / 2 ? 380 : -380);
+        }).strength(d => d.id === id ? 1 : conn.has(d.id) ? 0.4 : 0.15));
+        sim.force("x", null).force("y", null);
+        sim.alpha(0.6).alphaTarget(0.02).restart();
+      };
+
+      function showPanel(id) {
+        const panel = document.getElementById("info-panel");
+        if (!id) { panel.style.display = "none"; return; }
+        const nd = NODES.find(n => n.id === id);
+        const s = STRINGS[currentLang];
+        const conLinks = links.filter(l => {
+          const src = typeof l.source === "object" ? l.source.id : l.source;
+          const tgt = typeof l.target === "object" ? l.target.id : l.target;
+          return src === id || tgt === id;
+        });
+        const c = nd.mainColor;
+        const charDetails = nd[currentLang];
+
+        let rows = '';
+        if (conLinks.length === 0) {
+          rows = `<div style="font-size:10.5px;color:rgba(255,255,255,0.4);font-style:italic;">${s.noDirectOrbits}</div>`;
+        } else {
+          rows = conLinks.map(l => {
+            const oid = (typeof l.source === "object" ? l.source.id : l.source) === id
+              ? (typeof l.target === "object" ? l.target.id : l.target)
+              : (typeof l.source === "object" ? l.source.id : l.source);
+            const onameObj = NODES.find(n => n.id === oid);
+            const oname = onameObj ? onameObj[currentLang].name : oid;
+            const lType = s.relationshipTypes[l.type] || l.type;
+            const linkColor = SENTIMENT_COLORS[l.type] || "#c8a96e";
+            return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <span style="font-size:11.5px;color:rgba(255,255,255,0.85);">${oname}</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="width:${Math.max(12, l.weight * 4)}px;height:2.5px;background:${linkColor}99;border-radius:1px;"></div>
+                <span style="font-size:9px;color:rgba(255,255,255,0.5);text-transform:uppercase;">${lType}</span>
+              </div>
+            </div>`;
+          }).join("");
+        }
+
+        const portraitSrc = PORTRAITS[nd.id];
+        const quoteText = charDetails.quote || '';
+        panel.style.display = "block";
+        panel.innerHTML = `
+          <div style="margin-bottom:14px;">
+            ${portraitSrc ? `<div style="width:130px;height:190px;border-radius:8px;overflow:hidden;border:2px solid ${c};box-shadow:0 0 16px ${c}60;margin:0 auto 12px;">
+              <img src="${portraitSrc}" style="width:100%;height:100%;object-fit:cover;display:block;object-position:center top;" onerror="this.style.display='none';this.parentNode.style.background='#111420';">
+            </div>` : ''}
+            <div style="border-left:3px solid ${c};padding-left:12px;">
+              <div style="font-family:'Cinzel',serif;font-size:14px;color:${c};margin-bottom:2px;font-weight:600;">${charDetails.name}</div>
+              ${charDetails.nickname ? `<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:5px;">"${charDetails.nickname}"</div>` : ''}
+              ${quoteText ? `<div style="font-family:'Cinzel',serif;font-size:10.5px;color:rgba(200,169,110,0.75);font-style:italic;line-height:1.5;margin-bottom:2px;">"${quoteText}"</div>` : ''}
+            </div>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.65);line-height:1.55;margin-bottom:14px;">${charDetails.summary}</div>
+          <div style="font-size:9.5px;color:rgba(255,255,255,0.3);letter-spacing:.05em;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:6px;">
+            ${s.connections} (${conLinks.length})
+          </div>
+          ${rows}`;
+      }
+
+      sim.on("tick", () => {
+        linkSel.attr("d", d => {
+          if (d.source.x === undefined || d.target.x === undefined) return "";
+          const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
+          const dr = Math.sqrt(dx * dx + dy * dy) * 1.5;
+          return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+        });
+        node.attr("transform", d => `translate(${d.x},${d.y})`);
+      });
+
+      window.setLang('en');
+
+    })();
+  </script>
+</body>
+
+</html>

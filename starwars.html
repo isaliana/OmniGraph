@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OmniGraph · Star Wars Original Trilogy</title>
+  <meta name="description" content="Explore character relationships across the Star Wars Original Trilogy." />
+  <meta name="referrer" content="no-referrer" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Jura:wght@400;600&family=Cinzel:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: radial-gradient(ellipse at center, #0B0E14 0%, #000000 100%);
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      font-family: 'Jura', sans-serif;
+      overflow: hidden;
+      color: #fff;
+    }
+
+    #nn-root {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .nn-header {
+      padding: 15px 22px;
+      border-bottom: 1px solid rgba(255, 232, 31, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .back-hub-btn {
+      background: rgba(255, 232, 31, 0.08);
+      border: 1px solid rgba(255, 232, 31, 0.35);
+      color: #FFE81F;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      cursor: pointer;
+      text-decoration: none;
+      margin-right: 20px;
+      letter-spacing: 0.12em;
+      transition: all 0.2s;
+    }
+
+    .back-hub-btn:hover {
+      background: rgba(255, 232, 31, 0.2);
+      box-shadow: 0 0 12px rgba(255, 232, 31, 0.5);
+      color: #fff;
+    }
+
+    .nn-body {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .nn-canvas {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #nn-svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .sidebar {
+      width: 250px;
+      flex-shrink: 0;
+      background: rgba(0, 0, 0, 0.65);
+      border-left: 1px solid rgba(255, 232, 31, 0.12);
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+      backdrop-filter: blur(8px);
+    }
+
+    .sb-title {
+      font-size: 11px;
+      letter-spacing: .15em;
+      color: rgba(255, 255, 255, 0.4);
+      font-family: 'Orbitron', sans-serif;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 8px;
+    }
+
+    .sb-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .sb-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .timeline {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 1000;
+      backdrop-filter: blur(6px);
+      padding: 12px 16px;
+      border-radius: 6px;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(255, 232, 31, 0.18);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+    }
+
+    .ep-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 16px;
+      border: 1px solid rgba(255, 232, 31, 0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.25s;
+      background: rgba(255,232,31,0.04);
+      min-width: 90px;
+    }
+
+    .ep-card:hover {
+      background: rgba(255, 232, 31, 0.12);
+      border-color: rgba(255, 232, 31, 0.6);
+      box-shadow: 0 0 12px rgba(255, 232, 31, 0.25);
+    }
+
+    .ep-card.active {
+      background: rgba(255, 232, 31, 0.15);
+      border-color: #FFE81F;
+      box-shadow: 0 0 18px rgba(255, 232, 31, 0.45);
+    }
+
+    .ep-num {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      color: #FFE81F;
+      letter-spacing: 0.2em;
+      font-weight: 700;
+    }
+
+    .ep-card.active .ep-num {
+      text-shadow: 0 0 10px rgba(255,232,31,0.8);
+    }
+
+    .ep-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 8px;
+      color: rgba(255,255,255,0.55);
+      letter-spacing: 0.08em;
+      margin-top: 3px;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .ep-card.active .ep-title {
+      color: rgba(255,255,255,0.85);
+    }
+
+    .play-btn-sw {
+      background: rgba(255, 232, 31, 0.08);
+      border: 1px solid rgba(255, 232, 31, 0.35);
+      color: #FFE81F;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-right: 4px;
+    }
+
+    .play-btn-sw:hover {
+      background: rgba(255, 232, 31, 0.2);
+      box-shadow: 0 0 12px rgba(255, 232, 31, 0.4);
+    }
+
+    /* Starfield Background */
+    .stars {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: -1;
+      background-image:
+        radial-gradient(1px 1px at 15px 25px, #fff, rgba(0,0,0,0)),
+        radial-gradient(0.8px 0.8px at 38px 65px, rgba(255,255,255,0.9), rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 52px 155px, rgba(255,255,255,0.7), rgba(0,0,0,0)),
+        radial-gradient(1.5px 1.5px at 88px 38px, #fff, rgba(0,0,0,0)),
+        radial-gradient(0.8px 0.8px at 125px 75px, rgba(255,255,255,0.6), rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 175px 110px, rgba(255,255,255,0.8), rgba(0,0,0,0)),
+        radial-gradient(0.8px 0.8px at 60px 190px, rgba(255,255,255,0.5), rgba(0,0,0,0)),
+        radial-gradient(1.2px 1.2px at 140px 45px, rgba(255,255,255,0.9), rgba(0,0,0,0)),
+        radial-gradient(0.6px 0.6px at 95px 135px, rgba(200,220,255,0.7), rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 30px 105px, rgba(180,200,255,0.4), rgba(0,0,0,0)),
+        radial-gradient(0.8px 0.8px at 185px 170px, rgba(255,255,255,0.6), rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 70px 20px, rgba(255,255,255,0.8), rgba(0,0,0,0));
+      background-repeat: repeat;
+      background-size: 200px 200px;
+      animation: drift 120s linear infinite;
+      opacity: 0.7;
+    }
+
+    /* Nebula overlay */
+    .nebula {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: -1;
+      background:
+        radial-gradient(ellipse 60% 40% at 15% 20%, rgba(60, 20, 80, 0.25) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 30% at 85% 75%, rgba(10, 30, 80, 0.2) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Shooting star */
+    .shooting-star {
+      position: absolute;
+      top: 12%;
+      left: -5%;
+      width: 120px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.8), rgba(255,255,255,0));
+      animation: shoot 8s linear infinite;
+      opacity: 0;
+      z-index: -1;
+    }
+
+    .shooting-star:nth-child(2) {
+      top: 35%;
+      animation-delay: 3.5s;
+      width: 80px;
+    }
+
+    .shooting-star:nth-child(3) {
+      top: 60%;
+      animation-delay: 6s;
+      width: 100px;
+    }
+
+    @keyframes shoot {
+      0%   { left: -10%; opacity: 0; }
+      5%   { opacity: 1; }
+      30%  { opacity: 0; left: 110%; }
+      100% { left: 110%; opacity: 0; }
+    }
+
+    @keyframes drift {
+      from { background-position: 0 0; }
+      to { background-position: -1000px 500px; }
+    }
+
+    .hover-tooltip {
+      display: none;
+      position: fixed;
+      pointer-events: none;
+      background: rgba(5, 8, 15, 0.96);
+      border-radius: 6px;
+      padding: 14px 16px;
+      min-width: 220px;
+      max-width: 260px;
+      border: 1px solid rgba(255, 232, 31, 0.3);
+      backdrop-filter: blur(12px);
+      z-index: 1000;
+      font-family: 'Jura', sans-serif;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(255,232,31,0.05);
+      transition: opacity 0.15s ease;
+    }
+
+    .info-panel {
+      display: none;
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      background: rgba(5, 8, 15, 0.96);
+      border-radius: 6px;
+      padding: 16px 18px;
+      min-width: 280px;
+      max-width: 330px;
+      border: 1px solid rgba(255, 232, 31, 0.25);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+
+    /* Opening Crawl */
+    #crawl-overlay {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    #crawl-skip {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      background: transparent;
+      border: 1px solid rgba(255,232,31,0.4);
+      color: rgba(255,232,31,0.7);
+      padding: 5px 14px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.2s;
+      z-index: 10001;
+    }
+    #crawl-skip:hover { background: rgba(255,232,31,0.1); color: #FFE81F; }
+
+    #crawl-tagline {
+      position: absolute;
+      top: 18%;
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      color: #4a6fa5;
+      letter-spacing: 0.15em;
+      opacity: 0;
+      animation: tagFade 4s ease 0.5s forwards;
+    }
+
+    @keyframes tagFade {
+      0%   { opacity: 0; }
+      30%  { opacity: 1; }
+      70%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    #crawl-stage {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      perspective: 350px;
+    }
+
+    #crawl-text {
+      position: absolute;
+      bottom: -100%;
+      left: 50%;
+      transform: translateX(-50%) rotateX(25deg);
+      transform-origin: 50% 100%;
+      width: 55%;
+      max-width: 600px;
+      text-align: justify;
+      animation: crawlUp 22s linear 4s forwards;
+      opacity: 0;
+    }
+
+    #crawl-text.running { opacity: 1; }
+
+    @keyframes crawlUp {
+      from { bottom: -20%; opacity: 1; }
+      to   { bottom: 150%; opacity: 1; }
+    }
+
+    .crawl-episode {
+      font-family: 'Cinzel', serif;
+      font-size: 22px;
+      color: #FFE81F;
+      letter-spacing: 0.25em;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .crawl-title {
+      font-family: 'Cinzel', serif;
+      font-size: 32px;
+      color: #FFE81F;
+      letter-spacing: 0.2em;
+      text-align: center;
+      margin-bottom: 40px;
+      line-height: 1.3;
+    }
+
+    .crawl-body {
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      color: #FFE81F;
+      line-height: 1.8;
+      text-align: justify;
+    }
+
+    #crawl-fade {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
+      animation: crawlFadeOut 1.5s ease 12s forwards;
+      z-index: 10000;
+    }
+
+    @keyframes crawlFadeOut {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Opening Crawl -->
+  <div id="crawl-overlay">
+    <button id="crawl-skip" onclick="skipCrawl()">SKIP ▶▶</button>
+    <div id="crawl-tagline">A long time ago in a galaxy far, far away....</div>
+    <div id="crawl-stage">
+      <div id="crawl-text">
+        <div class="crawl-episode">EPISODE IV</div>
+        <div class="crawl-title">A NEW HOPE</div>
+        <p class="crawl-body">
+          It is a period of civil war. Rebel spaceships, striking from a hidden base, have won their first victory against the evil Galactic Empire.
+        </p>
+        <br>
+        <p class="crawl-body">
+          During the battle, Rebel spies managed to steal secret plans to the Empire's ultimate weapon, the DEATH STAR, an armored space station with enough power to destroy an entire planet.
+        </p>
+        <br>
+        <p class="crawl-body">
+          Pursued by the Empire's sinister agents, Princess Leia races home aboard her starship, custodian of the stolen plans that can save her people and restore freedom to the galaxy....
+        </p>
+      </div>
+    </div>
+    <div id="crawl-fade"></div>
+  </div>
+
+  <div id="nn-root">
+    <div class="stars"></div>
+    <div class="nebula"></div>
+    <div class="shooting-star"></div>
+    <div class="shooting-star"></div>
+    <div class="shooting-star"></div>
+    <div class="nn-header">
+      <div style="display: flex; align-items: center;">
+        <a href="index.html" class="back-hub-btn" id="btn-back">◀ HUB</a>
+        <div>
+          <div id="app-title" style="font-family:'Cinzel',serif;font-size:17px;color:#FFE81F;letter-spacing:.2em;text-shadow: 0 0 12px rgba(255,232,31,0.5);">
+            OMNIGRAPH : STAR WARS</div>
+          <div id="app-subtitle" style="font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:.15em;margin-top:4px;font-family:'Orbitron',sans-serif;">
+            The Original Trilogy</div>
+        </div>
+      </div>
+      <div class="lang-toggle" style="display:flex; gap:10px; font-family:'Orbitron',sans-serif; font-size:12px; color:rgba(255,255,255,0.4);">
+        <button class="lang-btn active" onclick="setLang('en')" id="btn-en" style="background:none;border:none;color:#FFE81F;cursor:pointer;transition:0.2s;font-weight:bold;">EN</button>
+        <span>|</span>
+        <button class="lang-btn" onclick="setLang('zh')" id="btn-zh" style="background:none;border:none;color:inherit;cursor:pointer;transition:0.2s;font-weight:bold;">中文</button>
+      </div>
+    </div>
+
+    <div class="nn-body">
+      <div class="nn-canvas">
+        <svg id="nn-svg"></svg>
+        <div class="info-panel" id="info-panel"></div>
+        <div class="timeline">
+          <button id="play-btn" class="play-btn-sw">▶</button>
+          <div class="ep-card active" id="ep-4" onclick="selectEpisode(4)">
+            <div class="ep-num">EPISODE IV</div>
+            <div class="ep-title">A NEW<br>HOPE</div>
+          </div>
+          <div class="ep-card" id="ep-5" onclick="selectEpisode(5)">
+            <div class="ep-num">EPISODE V</div>
+            <div class="ep-title">THE EMPIRE<br>STRIKES BACK</div>
+          </div>
+          <div class="ep-card" id="ep-6" onclick="selectEpisode(6)">
+            <div class="ep-num">EPISODE VI</div>
+            <div class="ep-title">RETURN OF<br>THE JEDI</div>
+          </div>
+        </div>
+      </div>
+      <div class="hover-tooltip" id="hover-tooltip"></div>
+      
+      <div class="sidebar">
+        <div style="margin-top:4px;">
+          <div class="sb-title" style="font-family:'Cinzel',serif;color:rgba(255,232,31,0.5);letter-spacing:.2em;">HOLOCRON</div>
+          <div id="legend-items" style="display:flex;flex-direction:column;gap:4px;margin-top:12px;">
+            <div class="sb-row"><div style="width:24px;height:4px;background:#4a90e2;border-radius:2px;box-shadow:0 0 8px #4a90e2;"></div><span class="sb-label">Friend / Ally</span></div>
+            <div class="sb-row"><div style="width:24px;height:4px;background:#e24a4a;border-radius:2px;box-shadow:0 0 8px #e24a4a;"></div><span class="sb-label">Enemy / Rival</span></div>
+            <div class="sb-row"><div style="width:24px;height:4px;background:#a14ae2;border-radius:2px;box-shadow:0 0 8px #a14ae2;"></div><span class="sb-label">Romance</span></div>
+            <div class="sb-row"><div style="width:24px;height:4px;background:#50e3c2;border-radius:2px;box-shadow:0 0 8px #50e3c2;"></div><span class="sb-label">Mentor / Master</span></div>
+            <div class="sb-row"><div style="width:24px;height:4px;background:#f5a623;border-radius:2px;box-shadow:0 0 8px #f5a623;"></div><span class="sb-label">Family / Betrayal</span></div>
+            <div class="sb-row"><div style="width:24px;height:4px;background:#9b9b9b;border-radius:2px;box-shadow:0 0 8px #9b9b9b;"></div><span class="sb-label">Acquaintance / Bounty</span></div>
+          </div>
+        </div>
+        <div style="margin-top:auto;font-size:11px;color:rgba(255,255,255,0.35);line-height:1.7;font-style:italic;">
+          Select a node to reveal its connections in the Force. Advance the timeline below to shift the fate of the galaxy.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <script src="starwars_data.js"></script>
+  <script>
+    // Opening crawl logic
+    function skipCrawl() {
+      const overlay = document.getElementById('crawl-overlay');
+      overlay.style.transition = 'opacity 0.6s ease';
+      overlay.style.opacity = '0';
+      setTimeout(() => overlay.remove(), 650);
+    }
+
+    // Auto-dismiss crawl once the fade-to-black animation completes
+    document.getElementById('crawl-fade').addEventListener('animationend', skipCrawl);
+
+    // Start crawl text rolling after tagline fades (4s delay)
+    setTimeout(() => {
+      document.getElementById('crawl-text').classList.add('running');
+    }, 4000);
+
+    (function () {
+      let currentLang = 'en';
+      let currentMovie = 4;
+      let selected = null;
+      let linkSel, nodeSel;
+
+
+      window.setLang = function(lang) {
+        currentLang = lang;
+        document.getElementById('btn-en').style.color = lang === 'en' ? '#FFE81F' : 'inherit';
+        document.getElementById('btn-zh').style.color = lang === 'zh' ? '#FFE81F' : 'inherit';
+        document.getElementById('btn-back').innerText = lang === 'en' ? '◀ HUB' : '◀ 返回主页';
+        document.getElementById('app-subtitle').innerText = lang === 'en' ? 'The Original Trilogy' : '正传三部曲';
+
+        if (nodeSel) {
+          nodeSel.selectAll('.nn-label').text(d => d[currentLang].name);
+        }
+        if (selected) showPanel(selected);
+      };
+
+
+      const SENTIMENT_COLORS = {
+        "ally": "#4a90e2",       // Blue
+        "enemy": "#e24a4a",      // Red
+        "tension": "#f5a623",    // Orange
+        "romance": "#a14ae2",    // Purple
+        "mentor": "#50e3c2",     // Teal/Green
+        "family": "#f5a623",     // Orange/Gold
+        "betrayal": "#e24a4a",   // Red
+        "bounty": "#9b9b9b"      // Grey
+      };
+
+      const PRETTY_TYPES = {
+        "ally": "Ally",
+        "enemy": "Enemy",
+        "tension": "Tension",
+        "romance": "Romance",
+        "mentor": "Mentor",
+        "family": "Family",
+        "betrayal": "Betrayal",
+        "bounty": "Target"
+      };
+
+      // SVG setup
+      const svgEl = document.getElementById("nn-svg");
+      let W = svgEl.clientWidth || window.innerWidth;
+      let H = svgEl.clientHeight || (window.innerHeight - 60);
+      const svg = d3.select("#nn-svg").attr("viewBox", `0 0 ${W} ${H}`);
+      const defs = svg.append("defs");
+      const g = svg.append("g");
+
+      // Deep Neon Filter
+      const gf = defs.append("filter").attr("id", "neonGlow").attr("x", "-20%").attr("y", "-20%").attr("width", "140%").attr("height", "140%");
+      gf.append("feGaussianBlur").attr("stdDeviation", "3").attr("result", "blur1");
+      gf.append("feGaussianBlur").attr("stdDeviation", "6").attr("result", "blur2");
+      const mm = gf.append("feMerge");
+      mm.append("feMergeNode").attr("in", "blur2");
+      mm.append("feMergeNode").attr("in", "blur1");
+      mm.append("feMergeNode").attr("in", "SourceGraphic");
+
+      const zoomBehavior = d3.zoom().scaleExtent([0.3, 4]).on("zoom", e => g.attr("transform", e.transform));
+      svg.call(zoomBehavior);
+
+      let sim = d3.forceSimulation()
+        .force("link", d3.forceLink().id(d => d.id).distance(d => 200 - d.weight * 5))
+        .force("charge", d3.forceManyBody().strength(-500))
+        .force("center", d3.forceCenter(W / 2, H / 2))
+        .force("collision", d3.forceCollide(65))
+        .force("bound", () => {
+          const m = 60;
+          sim.nodes().forEach(n => {
+            if (n.fx != null) return;
+            if (n.x < m)     n.vx += (m - n.x) * 0.15;
+            if (n.x > W - m) n.vx -= (n.x - (W - m)) * 0.15;
+            if (n.y < m)     n.vy += (m - n.y) * 0.15;
+            if (n.y > H - m) n.vy -= (n.y - (H - m)) * 0.15;
+          });
+        })
+        .alphaTarget(0.015);
+
+      const linkGrp = g.append("g").attr("class", "links");
+      const nodeGrp = g.append("g").attr("class", "nodes");
+
+      function updateGraph(movieNum) {
+        currentMovie = movieNum;
+        
+        // Filter links and dedup nodes
+        const activeLinksRaw = RAW_LINKS.filter(l => l.movie === currentMovie);
+        const activeNodeIds = new Set();
+        activeLinksRaw.forEach(l => {
+          activeNodeIds.add(typeof l.source === 'object' ? l.source.id : l.source);
+          activeNodeIds.add(typeof l.target === 'object' ? l.target.id : l.target);
+        });
+        
+        // Preserve positions
+        const oldNodes = new Map(sim.nodes().map(n => [n.id, n]));
+        
+        const activeNodes = RAW_NODES.filter(n => activeNodeIds.has(n.id)).map(n => {
+          const old = oldNodes.get(n.id);
+          return old ? { ...n, x: old.x, y: old.y, vx: old.vx, vy: old.vy } : { ...n };
+        });
+
+        const activeLinks = activeLinksRaw.map(l => ({ ...l }));
+
+        // Render Links
+        linkSel = linkGrp.selectAll("path").data(activeLinks, d => `${d.source.id || d.source}-${d.target.id || d.target}-${d.type}`);
+        
+        linkSel.exit().transition().duration(500).attr("opacity", 0).remove();
+        
+        const linkEnter = linkSel.enter().append("path")
+          .attr("fill", "none")
+          .attr("stroke", d => SENTIMENT_COLORS[d.type] || "#fff")
+          .attr("stroke-linecap", "round")
+          .attr("stroke-width", d => Math.max(1.5, d.weight * 0.5))
+          .attr("opacity", 0)
+          .style("filter", "url(#neonGlow)");
+
+        linkSel = linkEnter.merge(linkSel);
+        linkSel.transition().duration(500).attr("opacity", 0.7);
+
+        // Render Nodes
+        nodeSel = nodeGrp.selectAll("g.node").data(activeNodes, d => d.id);
+        
+        nodeSel.exit().transition().duration(500).attr("opacity", 0).remove();
+
+        const nodeEnter = nodeSel.enter().append("g")
+          .attr("class", "node")
+          .attr("cursor", "pointer")
+          .style("opacity", 0)
+          .call(d3.drag()
+            .on("start", (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+            .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
+            .on("end", (e, d) => { if (!e.active) sim.alphaTarget(0.015); d.fx = null; d.fy = null; })
+          )
+          .on("click", (e, d) => {
+            e.stopPropagation();
+            selected = selected === d.id ? null : d.id;
+            applyFocus(selected);
+            showPanel(selected);
+          })
+          .on("mouseenter", (e, d) => showHoverTooltip(e, d))
+          .on("mousemove", (e, d) => moveHoverTooltip(e))
+          .on("mouseleave", () => hideHoverTooltip());
+
+        // We use assets/portraits/id.png dynamically
+        // Since we don't have SVGs built inline, we'll append a defs strictly for the missing ones, or rely on image directly
+        nodeEnter.each(function(d) {
+          const gn = d3.select(this);
+          
+          const actualImg = typeof d.img === 'object' ? (d.img[currentMovie] || d.img.default || Object.values(d.img)[0]) : d.img;
+          const patId = `img-sw-${d.id}`;
+          let p = defs.select(`#${patId}`);
+          
+          if (p.empty()) {
+            p = defs.append("pattern")
+              .attr("id", patId)
+              .attr("patternUnits", "objectBoundingBox")
+              .attr("width", "1").attr("height", "1");
+              
+            const needsTopCrop = ['han', 'c3po'].includes(d.id);
+            p.append("image")
+              .attr("href", actualImg)
+              .attr("x", "0")
+              .attr("y", "0")
+              .attr("width", "60")
+              .attr("height", "60")
+              .attr("preserveAspectRatio", needsTopCrop ? "xMidYMin slice" : "xMidYMid slice")
+              .on("error", function() {
+                d3.select(this.parentNode.parentNode).select("circle").attr("fill", "#111420");
+                gn.append("text")
+                  .text(d.initials)
+                  .attr("text-anchor", "middle").attr("dy", "0.36em")
+                  .attr("font-size", "14px").attr("font-weight", "700")
+                  .attr("font-family", "'Orbitron',sans-serif")
+                  .attr("fill", d.mainColor)
+                  .attr("pointer-events", "none");
+              });
+          }
+
+          gn.append("circle")
+            .attr("r", 30)
+            .attr("class", "nn-main-circle")
+            .attr("fill", `url(#${patId})`)
+            .attr("stroke", d.mainColor)
+            .attr("stroke-width", 2)
+            .style("filter", "url(#neonGlow)");
+
+          gn.append("text")
+            .attr("class", "nn-label")
+            .text(d[currentLang].name)
+            .attr("text-anchor", "middle").attr("dy", "50px")
+            .attr("font-size", "11px").attr("font-family", "'Jura',sans-serif")
+            .attr("fill", "rgba(255,255,255,0.8)")
+            .attr("font-weight", "600")
+            .attr("pointer-events", "none");
+        });
+
+        nodeSel = nodeEnter.merge(nodeSel);
+        nodeSel.transition().duration(500).style("opacity", 1);
+        
+        nodeSel.each(function(d) {
+          const actualImg = typeof d.img === 'object' ? (d.img[currentMovie] || d.img.default || Object.values(d.img)[0]) : d.img;
+          defs.select(`#img-sw-${d.id} image`).attr("href", actualImg);
+        });
+
+        sim.nodes(activeNodes);
+        sim.force("link").links(activeLinks);
+        sim.alpha(0.8).restart();
+        
+        applyFocus(selected, true); // reapply focus over new data
+        showPanel(selected);
+      }
+
+      function getConnectedPaths(id) {
+        const s = new Set([id]);
+        sim.force("link").links().forEach(l => {
+          const src = typeof l.source === "object" ? l.source.id : l.source;
+          const tgt = typeof l.target === "object" ? l.target.id : l.target;
+          if (src === id) s.add(tgt);
+          if (tgt === id) s.add(src);
+        });
+        return s;
+      }
+      
+      function getSWRelationship(id1, id2) {
+        for (const l of sim.force("link").links()) {
+          const src = typeof l.source === "object" ? l.source.id : l.source;
+          const tgt = typeof l.target === "object" ? l.target.id : l.target;
+          if ((src === id1 && tgt === id2) || (src === id2 && tgt === id1)) {
+            return l;
+          }
+        }
+        return null;
+      }
+
+      window.applyFocus = function (id, soft = false) {
+        if (!nodeSel) return;
+
+        // Unpin any previously pinned node
+        sim.nodes().forEach(n => { n.fx = null; n.fy = null; });
+
+        if (!id) {
+          if (!soft) {
+            svg.transition().duration(750).call(zoomBehavior.transform, d3.zoomIdentity);
+          }
+          nodeSel.transition().duration(280).style("opacity", 1);
+          nodeSel.selectAll(".nn-main-circle").transition().duration(280)
+            .attr("stroke", d => d.mainColor)
+            .attr("stroke-width", 2);
+          linkSel.transition().duration(280).attr("opacity", 0.7);
+
+          sim.force("center", d3.forceCenter(W / 2, H / 2));
+          sim.force("charge", d3.forceManyBody().strength(-500));
+          sim.force("x", null);
+          sim.force("y", null);
+          if (!soft) sim.alpha(0.4).restart();
+          return;
+        }
+
+        const conn = getConnectedPaths(id);
+
+        // Pin selected node to screen center so it can't fly away
+        const selNode = sim.nodes().find(n => n.id === id);
+        if (selNode) {
+          if (!soft) { selNode.x = W / 2; selNode.y = H / 2; }
+          selNode.fx = W / 2;
+          selNode.fy = H / 2;
+        }
+
+        if (!soft) {
+          svg.transition().duration(750).call(zoomBehavior.transform, d3.zoomIdentity);
+        }
+
+        nodeSel.transition().duration(280).style("opacity", d => conn.has(d.id) ? 1 : 0.28);
+        nodeSel.selectAll(".nn-main-circle").transition().duration(280)
+          .attr("stroke", d => d.id === id ? "#fff" : d.mainColor)
+          .attr("stroke-width", d => d.id === id ? 4 : 2);
+
+        linkSel.transition().duration(280)
+          .attr("opacity", d => {
+            const s = typeof d.source === "object" ? d.source.id : d.source;
+            const t = typeof d.target === "object" ? d.target.id : d.target;
+            return (s === id || t === id) ? 1 : 0.05;
+          });
+
+        // Pull connected nodes toward center; gently push others inward too
+        sim.force("center", null);
+        sim.force("x", d3.forceX(W / 2).strength(d => conn.has(d.id) ? 0.12 : 0.03));
+        sim.force("y", d3.forceY(H / 2).strength(d => conn.has(d.id) ? 0.12 : 0.03));
+        sim.force("charge", d3.forceManyBody().strength(d => d.id === id ? 0 : (conn.has(d.id) ? -200 : -80)));
+        if (!soft) sim.alpha(0.5).restart();
+      };
+      
+      const panel = document.getElementById("info-panel");
+      function showPanel(id) {
+        if (!id) { panel.style.display = "none"; return; }
+        
+        const nd = RAW_NODES.find(n => n.id === id);
+        if(!nd) { panel.style.display = "none"; return; }
+        
+        const links = sim.force("link").links().filter(l => {
+          const s = typeof l.source === "object" ? l.source.id : l.source;
+          const t = typeof l.target === "object" ? l.target.id : l.target;
+          return s === id || t === id;
+        });
+        
+        let rows = '';
+        if (links.length === 0) {
+          rows = `<div style="font-size:11px;color:rgba(255,255,255,0.4);font-style:italic;">No active links in this era.</div>`;
+        } else {
+          rows = links.map(l => {
+            const oid = (typeof l.source === "object" ? l.source.id : l.source) === id
+              ? (typeof l.target === "object" ? l.target.id : l.target)
+              : (typeof l.source === "object" ? l.source.id : l.source);
+            const onameObj = RAW_NODES.find(n => n.id === oid);
+            const oname = onameObj ? onameObj[currentLang].name : oid;
+            const linkColor = SENTIMENT_COLORS[l.type] || "#fff";
+            const lType = PRETTY_TYPES[l.type] || l.type;
+
+            return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-size:12px;color:rgba(255,255,255,0.9); font-family:'Orbitron', sans-serif;">${oname}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:${Math.max(12, l.weight * 3)}px;height:3px;background:${linkColor};box-shadow:0 0 6px ${linkColor};border-radius:2px;"></div>
+          <span style="font-size:10px;color:rgba(255,255,255,0.6);text-transform:uppercase;">${lType}</span>
+        </div>
+      </div>`;
+          }).join("");
+        }
+        
+        const actualImg = typeof nd.img === 'object'
+          ? (nd.img[currentMovie] || nd.img.default || Object.values(nd.img)[0])
+          : nd.img;
+        const quoteText = nd[currentLang].quote || '';
+
+        panel.style.display = "block";
+        panel.innerHTML = `
+    <div style="margin-bottom:14px;">
+      <div style="width:130px;height:190px;border-radius:8px;overflow:hidden;border:2px solid ${nd.mainColor};box-shadow:0 0 16px ${nd.mainColor}60;margin:0 auto 12px;">
+        <img src="${actualImg}"
+             style="width:100%;height:100%;object-fit:cover;display:block;object-position:center ${ ['han','c3po'].includes(nd.id) ? 'top' : 'center' };"
+             onerror="this.style.display='none';this.parentNode.style.background='#111420';">
+      </div>
+      <div style="border-left:3px solid ${nd.mainColor};padding-left:12px;">
+        <div style="font-family:'Orbitron',sans-serif;font-size:15px;color:${nd.mainColor};font-weight:700;text-shadow:0 0 8px ${nd.mainColor}80;margin-bottom:5px;">${nd[currentLang].name}</div>
+        ${quoteText ? `<div style="font-family:'Cinzel',serif;font-size:11px;color:rgba(255,232,31,0.75);font-style:italic;line-height:1.5;margin-bottom:2px;">"${quoteText}"</div>` : ''}
+      </div>
+    </div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.65);line-height:1.55;margin-bottom:14px;">${nd[currentLang].summary}</div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:.1em;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:8px;font-family:'Orbitron',sans-serif;">
+      ACTIVE CONNECTIONS (${links.length})
+    </div>
+    ${rows}`;
+      }
+
+      // Timeline — Episode Cards
+      let isPlaying = false;
+      let playInterval;
+
+      window.selectEpisode = function(m) {
+        if (isPlaying) {
+          isPlaying = false;
+          clearInterval(playInterval);
+          document.getElementById('play-btn').innerText = '▶';
+        }
+        setActiveEpisode(m);
+        updateGraph(m);
+      };
+
+      function setActiveEpisode(m) {
+        [4, 5, 6].forEach(ep => {
+          const card = document.getElementById(`ep-${ep}`);
+          if (card) card.classList.toggle('active', ep === m);
+        });
+      }
+
+      document.getElementById('play-btn').addEventListener('click', function() {
+        isPlaying = !isPlaying;
+        this.innerText = isPlaying ? '⏸' : '▶';
+        if (isPlaying) {
+          playInterval = setInterval(() => {
+            const next = currentMovie < 6 ? currentMovie + 1 : 4;
+            setActiveEpisode(next);
+            updateGraph(next);
+          }, 3000);
+        } else {
+          clearInterval(playInterval);
+        }
+      });
+
+      // SVG Click deselect
+      svg.on("click", () => { selected = null; applyFocus(null); showPanel(null); });
+      
+      // TICK
+      sim.on("tick", () => {
+        if (!linkSel || !nodeSel) return;
+        linkSel.attr("d", d => {
+          if (d.source.x === undefined || d.target.x === undefined) return "";
+          const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y, dr = Math.sqrt(dx * dx + dy * dy) * 1.5; 
+          return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+        });
+        nodeSel.attr("transform", d => `translate(${d.x},${d.y})`);
+      });
+
+      // Tooltips
+      const hoverTooltip = document.getElementById('hover-tooltip');
+      function showHoverTooltip(event, d) {
+        if (!d) return;
+        let relationshipHtml = '';
+        if (selected && selected !== d.id) {
+          const rel = getSWRelationship(selected, d.id);
+          if (rel) {
+            const selNd = RAW_NODES.find(n => n.id === selected);
+            const relType = PRETTY_TYPES[rel.type] || rel.type;
+            relationshipHtml = `
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);">
+              <div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+                Link to ${selNd.name}
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="width:${Math.max(12, rel.weight * 4)}px;height:3px;background:${SENTIMENT_COLORS[rel.type] || d.mainColor};border-radius:2px;box-shadow:0 0 5px ${SENTIMENT_COLORS[rel.type]};"></div>
+                <span style="font-size:11px;color:rgba(255,255,255,0.8);">${relType}</span>
+              </div>
+            </div>`;
+          } else {
+            relationshipHtml = `<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);font-size:10px;color:rgba(255,255,255,0.3);font-style:italic;">No direct link</div>`;
+          }
+        }
+
+        const ttQuote = d[currentLang].quote || '';
+        hoverTooltip.innerHTML = `
+          <div style="font-family:'Orbitron',sans-serif;font-size:13px;color:${d.mainColor};font-weight:700;margin-bottom:3px;text-shadow:0 0 5px ${d.mainColor}80;">${d[currentLang].name}</div>
+          ${ttQuote ? `<div style="font-family:'Cinzel',serif;font-size:10px;color:rgba(255,232,31,0.7);font-style:italic;margin-bottom:6px;">"${ttQuote}"</div>` : ''}
+          <div style="font-size:11px;color:rgba(255,255,255,0.6);line-height:1.4;">${d[currentLang].summary}</div>
+          ${relationshipHtml}
+        `;
+        hoverTooltip.style.display = 'block';
+        hoverTooltip.style.opacity = '1';
+        moveHoverTooltip(event);
+      }
+      function moveHoverTooltip(event) {
+        const ttW = hoverTooltip.offsetWidth;
+        const ttH = hoverTooltip.offsetHeight;
+        let x = event.clientX + 16;
+        let y = event.clientY - 10;
+        if (x + ttW > window.innerWidth - 10) x = event.clientX - ttW - 16;
+        if (y + ttH > window.innerHeight - 10) y = window.innerHeight - ttH - 10;
+        hoverTooltip.style.left = x + 'px';
+        hoverTooltip.style.top = y + 'px';
+      }
+      function hideHoverTooltip() {
+        hoverTooltip.style.display = 'none';
+        hoverTooltip.style.opacity = '0';
+      }
+
+      window.addEventListener('resize', () => {
+        W = svgEl.clientWidth || window.innerWidth;
+        H = svgEl.clientHeight || (window.innerHeight - 60);
+        svg.attr("viewBox", `0 0 ${W} ${H}`);
+        sim.force("center", d3.forceCenter(W / 2, H / 2));
+        sim.alpha(0.3).restart();
+      });
+
+      // INIT
+      updateGraph(4);
+
+    })();
+  </script>
+</body>
+
+</html>
