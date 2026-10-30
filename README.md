@@ -2,9 +2,17 @@
 
 **An interactive character relationship explorer for literary works.**
 
-> *Currently featuring: The Brothers Karamazov by Fyodor Dostoevsky*
+> *Currently featuring: The Brothers Karamazov by Fyodor Dostoevsky, and the Star Wars original trilogy*
 
-![OmniGraph Preview](assets/preview.png)
+**🌐 [Live Demo →](https://isaliana.github.io/OmniGraph/)**
+
+### The Brothers Karamazov
+
+![The Brothers Karamazov preview](assets/preview-karamazov.gif)
+
+### Star Wars
+
+![Star Wars preview](assets/preview-starwars.gif)
 
 ---
 
