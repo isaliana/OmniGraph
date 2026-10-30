@@ -11,3 +11,6 @@ __pycache__/
 # Editor
 .vscode/
 .idea/
+
+# Screen recordings (large source videos)
+*.mov
